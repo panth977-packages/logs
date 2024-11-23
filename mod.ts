@@ -43,7 +43,7 @@ import { ensureFileSync, existsSync } from "@std/fs";
 export function createStringifyLogger(
   forEachLine: boolean,
   options: { addPrefix?: string; addTs?: "epoch" | "iso" } = {}
-) {
+): (prefix: string | null, args: unknown[]) => string {
   return function (prefix: string | null, args: unknown[]) {
     let logs = [util.format(...args)];
     if (forEachLine) logs = logs[0].split("\n");
@@ -82,7 +82,9 @@ export function createFileLogger(
   filepath: string,
   options: { expireDuration?: number; ttl?: number } = {},
   separator = "\n"
-) {
+): ((log: string) => Promise<void>) & {
+  dispose: () => Promise<void>;
+} {
   ensureFileSync(filepath);
 
   const file = Deno.openSync(filepath, {
