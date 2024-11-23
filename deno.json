@@ -1,0 +1,19 @@
+{
+  "name": "@panth977/logs",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "tasks": {
+    "format": "deno fmt **/*.ts",
+    "lint": "deno lint --fix"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-explicit-any"]
+    }
+  },
+  "imports": {
+    "@std/fs": "jsr:@std/fs@^1.0.6",
+    "util": "npm:util@^0.12.5"
+  }
+}
