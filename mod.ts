@@ -22,7 +22,7 @@
  * ```
  */
 import util from "util";
-import { ensureFileSync, existsSync } from "@std/fs";
+import * as fs from "fs";
 
 /**
  * Stringify your logs to console.log output string.
@@ -82,71 +82,59 @@ export function createFileLogger(
   filepath: string,
   options: { expireDuration?: number; ttl?: number } = {},
   separator = "\n"
-): ((log: string) => Promise<void>) & {
-  dispose: () => Promise<void>;
+): ((log: string) => void) & {
+  dispose: () => void;
 } {
-  ensureFileSync(filepath);
-
-  const file = Deno.openSync(filepath, {
-    write: true,
-    append: true,
-    create: true,
-  });
-  const writer = file.writable.getWriter();
-  const encoder = new TextEncoder();
-
-  async function appendLog(log: string): Promise<void> {
-    const data = encoder.encode(log + separator);
-    await writer.write(data);
+  const logWriteStream = fs.createWriteStream(filepath, { flags: "a" });
+  function appendLog(log: string) {
+    logWriteStream.write(log + separator);
   }
-
-  async function onInterval() {
-    if (!existsSync(filepath)) return;
-
-    const currentTime = Date.now();
-    await appendLog(` ---------- TIMESTAMP: ${currentTime} ---------- `);
-
-    const expiryTimestamp = Date.now() - (options.ttl || 0) * 1000;
-    const content = await Deno.readTextFile(filepath);
-
-    let chunk = content;
-    const regex = /---------- TIMESTAMP: (\d+) ----------/g;
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      const timestamp = parseInt(match[1], 10);
-      if (timestamp > expiryTimestamp) {
-        chunk = content.substring(match.index);
-        break;
+  logWriteStream;
+  function onInterval() {
+    try {
+      if (!fs.existsSync(filepath)) return;
+      const currentTime = Date.now();
+      appendLog(` ---------- TIMESTAMP: ${currentTime} ---------- `);
+      const expiryTimestamp = Date.now() - (options.ttl || 0) * 1000;
+      let chunk = fs.readFileSync(filepath).toString();
+      let match;
+      while (
+        (match = /---------- TIMESTAMP: (\d+) ----------/g.exec(chunk)) !== null
+      ) {
+        const timestamp = parseInt(match[1], 10);
+        if (timestamp > expiryTimestamp) {
+          chunk = chunk.substring(match.index);
+          break;
+        } else {
+          chunk = chunk.substring(match.index + match[0].length);
+        }
       }
+      fs.writeFileSync(filepath, chunk);
+    } catch (err) {
+      console.error(err);
     }
-
-    await Deno.writeTextFile(filepath, chunk);
   }
-
-  if (options.expireDuration && existsSync(filepath)) {
-    const stat = Deno.statSync(filepath);
-    const birthtime =
-      stat.birthtime?.getTime() ?? stat.mtime?.getTime() ?? Date.now();
-    const life = (Date.now() - birthtime) / 1000;
+  function dispose() {
+    return new Promise<void>((res, rej) => {
+      logWriteStream.close(function (err: unknown) {
+        if (err === null) {
+          res();
+        } else {
+          rej(err);
+        }
+      });
+    });
+  }
+  if (options.expireDuration && fs.existsSync(filepath)) {
+    const stats = fs.statSync(filepath);
+    const life = (Date.now() - stats.birthtime.getTime()) / 1000;
     if (life > options.expireDuration) {
-      Deno.removeSync(filepath);
+      fs.rmSync(filepath);
     }
   }
-
-  let intervalId: number | undefined;
   if (options.ttl) {
-    intervalId = setInterval(() => {
-      onInterval().catch(console.error);
-    }, 60 * 1000);
-    onInterval().catch(console.error);
+    setInterval(onInterval, 60 * 1000);
+    onInterval();
   }
-
-  return Object.assign(appendLog, {
-    dispose: async () => {
-      if (intervalId) clearInterval(intervalId);
-      await writer.close();
-      file.close();
-    },
-  });
+  return Object.assign(appendLog, { dispose });
 }

@@ -1,20 +1,8 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@std/fs@^1.0.6": "1.0.6",
-    "jsr:@std/path@^1.0.8": "1.0.8",
-    "npm:util@~0.12.5": "0.12.5"
-  },
-  "jsr": {
-    "@std/fs@1.0.6": {
-      "integrity": "42b56e1e41b75583a21d5a37f6a6a27de9f510bcd36c0c85791d685ca0b85fa2",
-      "dependencies": [
-        "jsr:@std/path"
-      ]
-    },
-    "@std/path@1.0.8": {
-      "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
-    }
+    "npm:fs@~0.0.0-security": "0.0.2",
+    "npm:util@0.12": "0.12.5"
   },
   "npm": {
     "available-typed-arrays@1.0.7": {
@@ -55,6 +43,9 @@
       "dependencies": [
         "is-callable"
       ]
+    },
+    "fs@0.0.2": {
+      "integrity": "sha512-YAiVokMCrSIFZiroB1oz51hPiPRVcUtSa4x2U5RYXyhS9VAPdiFigKbPTnOSq7XY8wd3FIVPYmXpo5lMzFmxgg=="
     },
     "function-bind@1.1.2": {
       "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA=="
@@ -161,8 +152,8 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/fs@^1.0.6",
-      "npm:util@~0.12.5"
+      "npm:fs@~0.0.0-security",
+      "npm:util@0.12"
     ]
   }
 }
