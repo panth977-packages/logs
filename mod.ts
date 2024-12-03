@@ -26,9 +26,6 @@ import * as fs from "fs";
 
 /**
  * Stringify your logs to console.log output string.
- * @param forEachLine add the options prefix for each line or each log
- * @param options add prefix options
- * @returns logging function with a prefix option.
  *
  * @example
  * ```ts
@@ -40,20 +37,25 @@ import * as fs from "fs";
  *    // ...stack'
  * ```
  */
-export function createStringifyLogger(
-  forEachLine: boolean,
-  options: { addPrefix?: string; addTs?: "epoch" | "iso" } = {}
-): (prefix: string | null, args: unknown[]) => string {
+export function createStringifyLogger({
+  forEachLine,
+  addPrefix,
+  addTs,
+}: {
+  forEachLine: boolean;
+  addPrefix?: string;
+  addTs?: "epoch" | "iso";
+}): (prefix: string | null, args: unknown[]) => string {
   return function (prefix: string | null, args: unknown[]) {
     let logs = [util.format(...args)];
     if (forEachLine) logs = logs[0].split("\n");
-    if (options.addPrefix)
-      logs = logs.map((x) => util.format(options.addPrefix, x));
+    if (addPrefix)
+      logs = logs.map((x) => util.format(addPrefix, x));
     if (prefix) logs = logs.map((x) => util.format(prefix, x));
-    if (options.addTs === "epoch") {
+    if (addTs === "epoch") {
       const epoch = Math.floor(Date.now() / 1000);
       logs = logs.map((x) => util.format(epoch, x));
-    } else if (options.addTs === "iso") {
+    } else if (addTs === "iso") {
       const iso = new Date().toISOString();
       logs = logs.map((x) => util.format(iso, x));
     }
@@ -62,11 +64,7 @@ export function createStringifyLogger(
 }
 
 /**
- *
- * @param filepath target file to stream logs to
- * @param options add logs ttl or file expiry
- * @param separator
- * @returns logger function to push your logs to file.
+ * Store logs to a file
  *
  * @example
  * ```ts
@@ -78,11 +76,17 @@ export function createStringifyLogger(
  * log2
  * ```
  */
-export function createFileLogger(
-  filepath: string,
-  options: { expireDuration?: number; ttl?: number } = {},
-  separator = "\n"
-): ((log: string) => void) & {
+export function createFileLogger({
+  filepath,
+  separator = "\n",
+  expireDuration,
+  ttl,
+}: {
+  filepath: string;
+  expireDuration?: number;
+  ttl?: number;
+  separator?: string;
+}): ((log: string) => void) & {
   dispose: () => void;
 } {
   const logWriteStream = fs.createWriteStream(filepath, { flags: "a" });
@@ -95,7 +99,7 @@ export function createFileLogger(
       if (!fs.existsSync(filepath)) return;
       const currentTime = Date.now();
       appendLog(` ---------- TIMESTAMP: ${currentTime} ---------- `);
-      const expiryTimestamp = Date.now() - (options.ttl || 0) * 1000;
+      const expiryTimestamp = Date.now() - (ttl || 0) * 1000;
       let chunk = fs.readFileSync(filepath).toString();
       let match;
       while (
@@ -125,14 +129,14 @@ export function createFileLogger(
       });
     });
   }
-  if (options.expireDuration && fs.existsSync(filepath)) {
+  if (expireDuration && fs.existsSync(filepath)) {
     const stats = fs.statSync(filepath);
     const life = (Date.now() - stats.birthtime.getTime()) / 1000;
-    if (life > options.expireDuration) {
+    if (life > expireDuration) {
       fs.rmSync(filepath);
     }
   }
-  if (options.ttl) {
+  if (ttl) {
     setInterval(onInterval, 60 * 1000);
     onInterval();
   }
